@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>打刻管理</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+
+    h1 {
+      font-size: 20px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+
+    #todayDate {
+      font-size: 16px;
+      color: #aaa;
+      margin-bottom: 20px;
+    }
+
+    #liveWorkTime {
+      font-size: 64px;
+      font-weight: normal;
+      margin: 20px 0;
+      color: #333;
+    }
+
+    .button-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #465DAA;
+      border: 1px solid #465DAA;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 5px 0;
+      cursor: pointer;
+    }
+
+    #endBtn {
+      width: 30px;
+      height: 30px;
+    }
+
+    button img {
+      height: 20px;
+      pointer-events: none;
+    }
+
+    #endBtn img {
+      height: 10px;
+    }
+
+    #logTable {
+      margin-top: 20px;
+      border-collapse: collapse;
+      min-width: 300px;
+    }
+
+    #logTable thead {
+      display: none;
+    }
+
+    #logTable td {
+      color: #888;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    #clearBtn {
+  font-size: 10px;
+  padding: 2px 8px;
+  margin-top: 10px;
+  color: #666;
+  background: #eee;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  display: inline-block;
+  height: auto;
+  width: auto;
+}
+
+
+    #clearBtn:hover {
+      background: #ddd;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>打刻管理</h1>
+  <div id="todayDate"></div>
+
+  <div id="liveWorkTime">--:--:--</div>
+
+  <div class="button-container">
+    <button id="startPauseBtn" onclick="handleStartPause()">
+      <img id="startPauseIcon" src="再生.png" alt="開始">
+    </button>
+    <button id="endBtn" onclick="endWork()">
+      <img src="停止.png" alt="終了">
+    </button>
+  </div>
+
+  <table id="logTable">
+    <thead><tr><th>時刻</th><th>内容</th></tr></thead>
+    <tbody id="logBody"></tbody>
+  </table>
+
+  <button id="clearBtn" onclick="clearLog()">クリア</button>
+
+  <script>
+    let log = [];
+    let pauseStart = null;
+    let totalBreak = 0;
+    let clockInTime = null;
+    let clockOutTime = null;
+    let inBreak = false;
+    let currentPhase = 'notStarted';
+    let lastDisplayed = '';
+
+    function formatTimeShort(date) {
+      return date.toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function formatLogDateTime(date) {
+      return date.toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function formatSecondsToHMS(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      return `${h > 0 ? h + '時間' : ''}${m}分`;
+    }
+
+    function formatSeconds(sec) {
+      const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    function addLog(message) {
+      const now = new Date();
+      const row = document.createElement('tr');
+      const timeCell = document.createElement('td');
+      timeCell.textContent = formatLogDateTime(now);
+      const msgCell = document.createElement('td');
+      msgCell.textContent = message;
+      row.appendChild(timeCell);
+      row.appendChild(msgCell);
+      document.getElementById('logBody').appendChild(row);
+      log.push(`${formatLogDateTime(now)}\t${message}`);
+      saveState();
+    }
+
+    function updateLiveTime() {
+      const now = new Date();
+      if (clockInTime && !clockOutTime) {
+        let elapsed = Math.floor((now - clockInTime) / 1000);
+        let breakNow = inBreak && pauseStart ? Math.floor((now - pauseStart) / 1000) : 0;
+        const actualElapsed = elapsed - (totalBreak + breakNow);
+        const displayTime = formatSeconds(actualElapsed);
+        if (!inBreak && displayTime !== lastDisplayed) {
+          document.getElementById('liveWorkTime').textContent = displayTime;
+          lastDisplayed = displayTime;
+        }
+      }
+      requestAnimationFrame(updateLiveTime);
+    }
+
+    function handleStartPause() {
+      const icon = document.getElementById('startPauseIcon');
+      const endBtn = document.getElementById('endBtn');
+
+      if (currentPhase === 'notStarted') {
+        clockInTime = new Date();
+        addLog('開始');
+        currentPhase = 'working';
+        icon.src = "一時停止.png";
+        endBtn.disabled = false;
+      } else if (currentPhase === 'working') {
+        pauseStart = new Date();
+        inBreak = true;
+        currentPhase = 'paused';
+        icon.src = "再生.png";
+        addLog('一時停止');
+      } else if (currentPhase === 'paused') {
+        const now = new Date();
+        const breakSec = Math.floor((now - pauseStart) / 1000);
+        totalBreak += breakSec;
+        pauseStart = null;
+        inBreak = false;
+        currentPhase = 'working';
+        icon.src = "一時停止.png";
+        addLog(`再開（休憩: ${formatSecondsToHMS(breakSec)}）`);
+      }
+      saveState();
+    }
+
+    function endWork() {
+      const icon = document.getElementById('startPauseIcon');
+      clockOutTime = new Date();
+      if (inBreak && pauseStart) {
+        totalBreak += Math.floor((clockOutTime - pauseStart) / 1000);
+        pauseStart = null;
+        inBreak = false;
+      }
+      addLog('終了');
+      currentPhase = 'notStarted';
+      icon.src = "再生.png";
+      document.getElementById('endBtn').disabled = true;
+      saveState();
+    }
+
+    function clearLog() {
+      if (confirm("ログをすべて削除してもよろしいですか？")) {
+        log = [];
+        pauseStart = null;
+        totalBreak = 0;
+        clockInTime = null;
+        clockOutTime = null;
+        inBreak = false;
+        currentPhase = 'notStarted';
+        document.getElementById('logBody').innerHTML = '';
+        document.getElementById('liveWorkTime').textContent = '--:--:--';
+        document.getElementById('startPauseIcon').src = "再生.png";
+        document.getElementById('endBtn').disabled = true;
+        localStorage.removeItem('dakcokuState');
+      }
+    }
+
+    function updateTodayDate() {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        weekday: 'short'
+      });
+      const timeStr = now.toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      document.getElementById('todayDate').textContent = `本日：${dateStr}　${timeStr}`;
+    }
+
+    function saveState() {
+      const state = {
+        clockInTime,
+        clockOutTime,
+        pauseStart,
+        totalBreak,
+        inBreak,
+        currentPhase,
+        log
+      };
+      localStorage.setItem('dakcokuState', JSON.stringify(state));
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem('dakcokuState');
+      if (!saved) return;
+      const state = JSON.parse(saved);
+      clockInTime = state.clockInTime ? new Date(state.clockInTime) : null;
+      clockOutTime = state.clockOutTime ? new Date(state.clockOutTime) : null;
+      pauseStart = state.pauseStart ? new Date(state.pauseStart) : null;
+      totalBreak = state.totalBreak;
+      inBreak = state.inBreak;
+      currentPhase = state.currentPhase;
+      log = state.log || [];
+
+      const logBody = document.getElementById('logBody');
+      logBody.innerHTML = '';
+      log.forEach(entry => {
+        const [dateStr, message] = entry.split('\t');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${dateStr}</td><td>${message}</td>`;
+        logBody.appendChild(row);
+      });
+
+      const icon = document.getElementById('startPauseIcon');
+      icon.src = (currentPhase === 'paused') ? "再生.png" :
+                 (currentPhase === 'working') ? "一時停止.png" : "再生.png";
+
+      document.getElementById('endBtn').disabled = currentPhase === 'notStarted';
+    }
+
+    loadState();
+    updateTodayDate();
+    setInterval(updateTodayDate, 60000);
+    requestAnimationFrame(updateLiveTime);
+  </script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then((registration) => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch((error) => {
+          console.log('Service Worker registration failed:', error);
+        });
+    });
+  }
+</script>
+</body>
+</html>
