@@ -3,11 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <title>打刻管理</title>
+
+  <!-- Google Fonts: Oswald -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
       background: #f9f9f9;
+    }
+
+    /* Oswald custom font class */
+    .oswald-custom {
+      font-family: "Oswald", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: 400; /* ← 好みに応じて200〜700に調整可能 */
+      font-style: normal;
+      font-variant-numeric: tabular-nums;
     }
 
     h1 {
@@ -19,13 +34,14 @@
     #todayDate {
       font-size: 16px;
       color: #aaa;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
 
     #thankYouMessage {
       font-size: 18px;
-      color: #e91e63; /* ← ピンクに変更（マテリアルカラーのローズピンク） */
-      margin-bottom: 10px;
+      color: #e91e63;
+      margin: 5px 0 10px;
+      font-weight: bold;
     }
 
     #liveWorkTime {
@@ -92,7 +108,7 @@
       background: #eee;
       border: 1px solid #ccc;
       border-radius: 4px;
-      display: inline-block;
+      display: none;
       height: auto;
       width: auto;
     }
@@ -104,11 +120,10 @@
 </head>
 <body>
 
-  <h1>打刻管理</h1>
+  <h1 class="oswald-custom">打刻管理</h1>
   <div id="todayDate"></div>
-
   <div id="thankYouMessage"></div>
-  <div id="liveWorkTime">--:--:--</div>
+  <div id="liveWorkTime" class="oswald-custom">--:--:--</div>
 
   <div class="button-container">
     <button id="startPauseBtn" onclick="handleStartPause()">
@@ -177,6 +192,7 @@
       row.appendChild(msgCell);
       document.getElementById('logBody').appendChild(row);
       log.push(`${formatLogDateTime(now)}\t${message}`);
+      document.getElementById('clearBtn').style.display = 'inline-block';
       saveState();
     }
 
@@ -199,14 +215,13 @@
       const icon = document.getElementById('startPauseIcon');
       const endBtn = document.getElementById('endBtn');
 
-      document.getElementById('thankYouMessage').textContent = '';
-
       if (currentPhase === 'notStarted') {
         clockInTime = new Date();
         addLog('開始');
         currentPhase = 'working';
         icon.src = "一時停止.png";
         endBtn.disabled = false;
+        document.getElementById('thankYouMessage').textContent = '';
       } else if (currentPhase === 'working') {
         pauseStart = new Date();
         inBreak = true;
@@ -255,6 +270,7 @@
         document.getElementById('liveWorkTime').textContent = '--:--:--';
         document.getElementById('startPauseIcon').src = "再生.png";
         document.getElementById('endBtn').disabled = true;
+        document.getElementById('clearBtn').style.display = 'none';
         document.getElementById('thankYouMessage').textContent = '';
         localStorage.removeItem('dakcokuState');
       }
@@ -309,6 +325,10 @@
         logBody.appendChild(row);
       });
 
+      if (log.length > 0) {
+        document.getElementById('clearBtn').style.display = 'inline-block';
+      }
+
       const icon = document.getElementById('startPauseIcon');
       icon.src = (currentPhase === 'paused') ? "再生.png" :
                  (currentPhase === 'working') ? "一時停止.png" : "再生.png";
@@ -321,6 +341,5 @@
     setInterval(updateTodayDate, 60000);
     requestAnimationFrame(updateLiveTime);
   </script>
-
 </body>
 </html>
