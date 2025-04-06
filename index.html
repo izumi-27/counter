@@ -22,6 +22,12 @@
       margin-bottom: 20px;
     }
 
+    #thankYouMessage {
+      font-size: 18px;
+      color: #465DAA;
+      margin-bottom: 10px;
+    }
+
     #liveWorkTime {
       font-size: 64px;
       font-weight: normal;
@@ -79,18 +85,17 @@
     }
 
     #clearBtn {
-  font-size: 10px;
-  padding: 2px 8px;
-  margin-top: 10px;
-  color: #666;
-  background: #eee;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  display: inline-block;
-  height: auto;
-  width: auto;
-}
-
+      font-size: 10px;
+      padding: 2px 8px;
+      margin-top: 10px;
+      color: #666;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      display: inline-block;
+      height: auto;
+      width: auto;
+    }
 
     #clearBtn:hover {
       background: #ddd;
@@ -102,6 +107,7 @@
   <h1>打刻管理</h1>
   <div id="todayDate"></div>
 
+  <div id="thankYouMessage"></div>
   <div id="liveWorkTime">--:--:--</div>
 
   <div class="button-container">
@@ -193,6 +199,8 @@
       const icon = document.getElementById('startPauseIcon');
       const endBtn = document.getElementById('endBtn');
 
+      document.getElementById('thankYouMessage').textContent = '';
+
       if (currentPhase === 'notStarted') {
         clockInTime = new Date();
         addLog('開始');
@@ -230,6 +238,7 @@
       currentPhase = 'notStarted';
       icon.src = "再生.png";
       document.getElementById('endBtn').disabled = true;
+      document.getElementById('thankYouMessage').textContent = 'お疲れさまでした！';
       saveState();
     }
 
@@ -246,6 +255,7 @@
         document.getElementById('liveWorkTime').textContent = '--:--:--';
         document.getElementById('startPauseIcon').src = "再生.png";
         document.getElementById('endBtn').disabled = true;
+        document.getElementById('thankYouMessage').textContent = '';
         localStorage.removeItem('dakcokuState');
       }
     }
@@ -311,5 +321,6 @@
     setInterval(updateTodayDate, 60000);
     requestAnimationFrame(updateLiveTime);
   </script>
+
 </body>
 </html>
