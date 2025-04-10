@@ -8,19 +8,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: "Oswald", sans-serif;
+      font-family: sans-serif;
       padding: 20px;
       background: #f9f9f9;
     }
 
-    h1 {
-      font-size: 20px;
-      color: #555;
-      margin-bottom: 5px;
-    }
-
     #todayDate {
-      font-size: 14px;
+      font-size: 18px;
       color: #999;
       margin-bottom: 10px;
     }
@@ -33,9 +27,18 @@
     }
 
     #liveWorkTime {
-      font-size: 48px;
+      font-size: 50px;
+      font-family: "Oswald", sans-serif;
       margin: 20px 0;
       color: #333;
+      line-height: 1.1;  /* 行間を狭く設定 */
+    }
+
+    #workTimeAfterBreak {
+      font-size: 16px;
+      color: #999;
+      margin-top: -15px;  /* 必要に応じて調整 */
+      margin-bottom: 15px;
     }
 
     .button-container {
@@ -45,10 +48,11 @@
     }
 
     .emoji-button {
-      font-size: 28px;
+      font-size: 30px;
       background: none;
       border: none;
       cursor: pointer;
+      filter: brightness(50%) contrast(300%) grayscale(100%) invert(100%);
     }
 
     #logTable {
@@ -58,14 +62,19 @@
     }
 
     #logTable td {
-      color: #666;
-      padding: 2px 8px;
+      color: #999;
+      padding: 2px 2px; /* 間隔を調整 */
       white-space: nowrap;
+      width: 80px; /* 時間の幅を固定 */
+    }
+
+    #logTable td:nth-child(2) {
+      width: 200px; /* 内容の幅を固定 */
     }
 
     #clearBtn {
-      font-size: 12px;
-      padding: 4px 10px;
+      font-size: 8px;
+      padding: 2px 4px;
       margin-top: 10px;
       color: #444;
       background: #eee;
@@ -73,6 +82,8 @@
       border-radius: 4px;
       display: none;
       cursor: pointer;
+      height: auto;
+      width: auto;
     }
 
     #clearBtn:hover {
@@ -82,10 +93,10 @@
 </head>
 <body>
 
-  <h1>打刻管理</h1>
   <div id="todayDate"></div>
   <div id="thankYouMessage"></div>
   <div id="liveWorkTime">--:--:--</div>
+  <div id="workTimeAfterBreak">連続稼働：</div>
 
   <div class="button-container">
     <button id="startPauseBtn" class="emoji-button" onclick="handleStartPause()">▶️</button>
@@ -107,16 +118,15 @@
     let inBreak = false;
     let currentPhase = 'notStarted';
     let lastDisplayed = '';
+    let totalElapsed = 0;
+    let workAfterBreakStart = null;
 
     function formatTimeShort(date) {
       return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     }
 
-    function formatLogDateTime(date) {
-      return date.toLocaleString('ja-JP', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit'
-      });
+    function formatLogTime(date) {
+      return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     }
 
     function formatSecondsToHMS(sec) {
@@ -135,10 +145,17 @@
     function addLog(message) {
       const now = new Date();
       const row = document.createElement('tr');
-      row.innerHTML = `<td>${formatLogDateTime(now)}</td><td>${message}</td>`;
-      document.getElementById('logBody').appendChild(row);
-      log.push(`${formatLogDateTime(now)}\t${message}`);
+      row.innerHTML = `<td>${formatLogTime(now)}</td><td>${message}</td>`;
+      document.getElementById('logBody').appendChild(row);  // DOM 更新のタイミングを確保
+      log.push(`${formatLogTime(now)}\t${message}`);
+
+      // ログの追加後、スクロールを一番下に移動
+      const logBody = document.getElementById('logBody');
+      logBody.scrollTop = logBody.scrollHeight;
+
+      // 「クリア」ボタンの表示
       document.getElementById('clearBtn').style.display = 'inline-block';
+      
       saveState();
     }
 
@@ -148,10 +165,27 @@
         let elapsed = Math.floor((now - clockInTime) / 1000);
         let breakNow = inBreak && pauseStart ? Math.floor((now - pauseStart) / 1000) : 0;
         const actualElapsed = elapsed - (totalBreak + breakNow);
+        totalElapsed = actualElapsed;
         const displayTime = formatSeconds(actualElapsed);
+
+        // 不要な更新を避けるため、前回と同じ表示時間なら更新しない
         if (!inBreak && displayTime !== lastDisplayed) {
           document.getElementById('liveWorkTime').textContent = displayTime;
           lastDisplayed = displayTime;
+        }
+
+        if (workAfterBreakStart) {
+          const workAfterBreakElapsed = Math.floor((now - workAfterBreakStart) / 1000);
+          
+          // 1時間を超えた場合に赤文字で表示
+          const workAfterBreakTimeText = `連続稼働：${formatSecondsToHMS(workAfterBreakElapsed)}`;
+          const workAfterBreakElement = document.getElementById('workTimeAfterBreak');
+          if (workAfterBreakElapsed > 3600) {
+            workAfterBreakElement.style.color = 'red'; // 1時間を超えたら赤文字
+          } else {
+            workAfterBreakElement.style.color = '#999'; // 1時間未満は通常の色
+          }
+          workAfterBreakElement.textContent = workAfterBreakTimeText;
         }
       }
       requestAnimationFrame(updateLiveTime);
@@ -182,12 +216,18 @@
         inBreak = false;
         currentPhase = 'working';
         icon.textContent = "⏸️";
+        workAfterBreakStart = new Date();  // 再開時間を記録
         addLog(`再開（休憩: ${formatSecondsToHMS(breakSec)}）`);
       }
       saveState();
     }
 
     function endWork() {
+      const isConfirmed = confirm("終了してよろしいですか？");
+      if (!isConfirmed) {
+        return; // ユーザーがキャンセルした場合は処理を中断
+      }
+
       const icon = document.getElementById('startPauseBtn');
       clockOutTime = new Date();
       if (inBreak && pauseStart) {
@@ -202,7 +242,7 @@
       currentPhase = 'notStarted';
       icon.textContent = "▶️";
       document.getElementById('endBtn').style.display = 'none';
-      document.getElementById('thankYouMessage').textContent = `お疲れさまでした！累計労働時間：${workTimeStr}`;
+      document.getElementById('thankYouMessage').innerHTML = `お疲れさまでした！<br>累計労働時間：${workTimeStr}`;
       saveState();
     }
 
@@ -217,6 +257,7 @@
         currentPhase = 'notStarted';
         document.getElementById('logBody').innerHTML = '';
         document.getElementById('liveWorkTime').textContent = '--:--:--';
+        document.getElementById('workTimeAfterBreak').textContent = '連続稼働：';
         document.getElementById('startPauseBtn').textContent = "▶️";
         document.getElementById('endBtn').style.display = 'none';
         document.getElementById('clearBtn').style.display = 'none';
@@ -228,16 +269,16 @@
     function updateTodayDate() {
       const now = new Date();
       const dateStr = now.toLocaleDateString('ja-JP', {
+        weekday: 'short',
         year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        weekday: 'short'
+        month: 'numeric',
+        day: 'numeric'
       });
       const timeStr = now.toLocaleTimeString('ja-JP', {
         hour: '2-digit',
         minute: '2-digit'
       });
-      document.getElementById('todayDate').textContent = `本日：${dateStr}　${timeStr}`;
+      document.getElementById('todayDate').textContent = `${dateStr}　${timeStr}`;
     }
 
     function saveState() {
@@ -248,7 +289,9 @@
         totalBreak,
         inBreak,
         currentPhase,
-        log
+        log,
+        totalElapsed,
+        workAfterBreakStart
       };
       localStorage.setItem('dakcokuState', JSON.stringify(state));
     }
@@ -264,13 +307,15 @@
       inBreak = state.inBreak;
       currentPhase = state.currentPhase;
       log = state.log || [];
+      totalElapsed = state.totalElapsed || 0;
+      workAfterBreakStart = state.workAfterBreakStart ? new Date(state.workAfterBreakStart) : null;
 
       const logBody = document.getElementById('logBody');
       logBody.innerHTML = '';
       log.forEach(entry => {
-        const [dateStr, message] = entry.split('\t');
+        const [timeStr, message] = entry.split('\t');
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${dateStr}</td><td>${message}</td>`;
+        row.innerHTML = `<td>${timeStr}</td><td>${message}</td>`;
         logBody.appendChild(row);
       });
 
@@ -282,6 +327,10 @@
       icon.textContent = (currentPhase === 'paused') ? "▶️" :
                          (currentPhase === 'working') ? "⏸️" : "▶️";
       document.getElementById('endBtn').style.display = (currentPhase === 'notStarted') ? 'none' : 'inline-block';
+      document.getElementById('liveWorkTime').textContent = formatSeconds(totalElapsed);
+      if (workAfterBreakStart) {
+        document.getElementById('workTimeAfterBreak').textContent = `連続稼働：`;
+      }
     }
 
     loadState();
