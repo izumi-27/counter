@@ -3,37 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <title>打刻管理</title>
-
-  <!-- Google Fonts: Oswald -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-
   <style>
     body {
-      font-family: sans-serif;
+      font-family: "Oswald", sans-serif;
       padding: 20px;
       background: #f9f9f9;
     }
 
-    /* Oswald custom font class */
-    .oswald-custom {
-      font-family: "Oswald", sans-serif;
-      font-optical-sizing: auto;
-      font-weight: 400; /* ← 好みに応じて200〜700に調整可能 */
-      font-style: normal;
-      font-variant-numeric: tabular-nums;
-    }
-
     h1 {
       font-size: 20px;
-      color: #888;
+      color: #555;
       margin-bottom: 5px;
     }
 
     #todayDate {
-      font-size: 16px;
-      color: #aaa;
+      font-size: 14px;
+      color: #999;
       margin-bottom: 10px;
     }
 
@@ -45,43 +33,22 @@
     }
 
     #liveWorkTime {
-      font-size: 64px;
-      font-weight: normal;
+      font-size: 48px;
       margin: 20px 0;
       color: #333;
     }
 
     .button-container {
       display: flex;
-      align-items: center;
       gap: 10px;
+      margin-bottom: 10px;
     }
 
-    button {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background-color: #465DAA;
-      border: 1px solid #465DAA;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin: 5px 0;
+    .emoji-button {
+      font-size: 28px;
+      background: none;
+      border: none;
       cursor: pointer;
-    }
-
-    #endBtn {
-      width: 30px;
-      height: 30px;
-    }
-
-    button img {
-      height: 20px;
-      pointer-events: none;
-    }
-
-    #endBtn img {
-      height: 10px;
     }
 
     #logTable {
@@ -90,27 +57,22 @@
       min-width: 300px;
     }
 
-    #logTable thead {
-      display: none;
-    }
-
     #logTable td {
-      color: #888;
+      color: #666;
       padding: 2px 8px;
       white-space: nowrap;
     }
 
     #clearBtn {
-      font-size: 10px;
-      padding: 2px 8px;
+      font-size: 12px;
+      padding: 4px 10px;
       margin-top: 10px;
-      color: #666;
+      color: #444;
       background: #eee;
       border: 1px solid #ccc;
       border-radius: 4px;
       display: none;
-      height: auto;
-      width: auto;
+      cursor: pointer;
     }
 
     #clearBtn:hover {
@@ -120,22 +82,17 @@
 </head>
 <body>
 
-  <h1 class="oswald-custom">打刻管理</h1>
+  <h1>打刻管理</h1>
   <div id="todayDate"></div>
   <div id="thankYouMessage"></div>
-  <div id="liveWorkTime" class="oswald-custom">--:--:--</div>
+  <div id="liveWorkTime">--:--:--</div>
 
   <div class="button-container">
-    <button id="startPauseBtn" onclick="handleStartPause()">
-      <img id="startPauseIcon" src="再生.png" alt="開始">
-    </button>
-    <button id="endBtn" onclick="endWork()">
-      <img src="停止.png" alt="終了">
-    </button>
+    <button id="startPauseBtn" class="emoji-button" onclick="handleStartPause()">▶️</button>
+    <button id="endBtn" class="emoji-button" onclick="endWork()" style="display: none;">⏹️</button>
   </div>
 
   <table id="logTable">
-    <thead><tr><th>時刻</th><th>内容</th></tr></thead>
     <tbody id="logBody"></tbody>
   </table>
 
@@ -152,19 +109,13 @@
     let lastDisplayed = '';
 
     function formatTimeShort(date) {
-      return date.toLocaleTimeString('ja-JP', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     }
 
     function formatLogDateTime(date) {
       return date.toLocaleString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
       });
     }
 
@@ -184,12 +135,7 @@
     function addLog(message) {
       const now = new Date();
       const row = document.createElement('tr');
-      const timeCell = document.createElement('td');
-      timeCell.textContent = formatLogDateTime(now);
-      const msgCell = document.createElement('td');
-      msgCell.textContent = message;
-      row.appendChild(timeCell);
-      row.appendChild(msgCell);
+      row.innerHTML = `<td>${formatLogDateTime(now)}</td><td>${message}</td>`;
       document.getElementById('logBody').appendChild(row);
       log.push(`${formatLogDateTime(now)}\t${message}`);
       document.getElementById('clearBtn').style.display = 'inline-block';
@@ -212,21 +158,21 @@
     }
 
     function handleStartPause() {
-      const icon = document.getElementById('startPauseIcon');
+      const icon = document.getElementById('startPauseBtn');
       const endBtn = document.getElementById('endBtn');
 
       if (currentPhase === 'notStarted') {
         clockInTime = new Date();
         addLog('開始');
         currentPhase = 'working';
-        icon.src = "一時停止.png";
-        endBtn.disabled = false;
+        icon.textContent = "⏸️";
+        endBtn.style.display = 'inline-block';
         document.getElementById('thankYouMessage').textContent = '';
       } else if (currentPhase === 'working') {
         pauseStart = new Date();
         inBreak = true;
         currentPhase = 'paused';
-        icon.src = "再生.png";
+        icon.textContent = "▶️";
         addLog('一時停止');
       } else if (currentPhase === 'paused') {
         const now = new Date();
@@ -235,14 +181,14 @@
         pauseStart = null;
         inBreak = false;
         currentPhase = 'working';
-        icon.src = "一時停止.png";
+        icon.textContent = "⏸️";
         addLog(`再開（休憩: ${formatSecondsToHMS(breakSec)}）`);
       }
       saveState();
     }
 
     function endWork() {
-      const icon = document.getElementById('startPauseIcon');
+      const icon = document.getElementById('startPauseBtn');
       clockOutTime = new Date();
       if (inBreak && pauseStart) {
         totalBreak += Math.floor((clockOutTime - pauseStart) / 1000);
@@ -250,10 +196,13 @@
         inBreak = false;
       }
       addLog('終了');
+      const elapsed = Math.floor((clockOutTime - clockInTime) / 1000);
+      const actualElapsed = elapsed - totalBreak;
+      const workTimeStr = formatSecondsToHMS(actualElapsed);
       currentPhase = 'notStarted';
-      icon.src = "再生.png";
-      document.getElementById('endBtn').disabled = true;
-      document.getElementById('thankYouMessage').textContent = 'お疲れさまでした！';
+      icon.textContent = "▶️";
+      document.getElementById('endBtn').style.display = 'none';
+      document.getElementById('thankYouMessage').textContent = `お疲れさまでした！累計労働時間：${workTimeStr}`;
       saveState();
     }
 
@@ -268,8 +217,8 @@
         currentPhase = 'notStarted';
         document.getElementById('logBody').innerHTML = '';
         document.getElementById('liveWorkTime').textContent = '--:--:--';
-        document.getElementById('startPauseIcon').src = "再生.png";
-        document.getElementById('endBtn').disabled = true;
+        document.getElementById('startPauseBtn').textContent = "▶️";
+        document.getElementById('endBtn').style.display = 'none';
         document.getElementById('clearBtn').style.display = 'none';
         document.getElementById('thankYouMessage').textContent = '';
         localStorage.removeItem('dakcokuState');
@@ -329,11 +278,10 @@
         document.getElementById('clearBtn').style.display = 'inline-block';
       }
 
-      const icon = document.getElementById('startPauseIcon');
-      icon.src = (currentPhase === 'paused') ? "再生.png" :
-                 (currentPhase === 'working') ? "一時停止.png" : "再生.png";
-
-      document.getElementById('endBtn').disabled = currentPhase === 'notStarted';
+      const icon = document.getElementById('startPauseBtn');
+      icon.textContent = (currentPhase === 'paused') ? "▶️" :
+                         (currentPhase === 'working') ? "⏸️" : "▶️";
+      document.getElementById('endBtn').style.display = (currentPhase === 'notStarted') ? 'none' : 'inline-block';
     }
 
     loadState();
