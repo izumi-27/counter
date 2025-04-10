@@ -52,7 +52,7 @@
       background: none;
       border: none;
       cursor: pointer;
-      filter: brightness(50%) contrast(300%) grayscale(100%) invert(100%);
+      filter: grayscale(100%);
     }
 
     #logTable {
@@ -89,6 +89,33 @@
     #clearBtn:hover {
       background: #ddd;
     }
+
+  /* スマホ表示のためのメディアクエリ */
+  @media (max-width: 768px) {
+    body {
+      padding: 10px;
+    }
+
+    #liveWorkTime {
+      font-size: 40px; /* スマホ用に文字サイズ調整 */
+      text-align: center;
+    }
+
+    #workTimeAfterBreak {
+      font-size: 14px; /* スマホ用にフォントサイズ調整 */
+      text-align: center;
+    }
+
+    .button-container {
+      flex-direction: column; /* ボタンを縦に並べる */
+      align-items: center;
+    }
+
+    .emoji-button {
+      font-size: 24px; /* ボタンのフォントサイズを少し小さくする */
+      margin-bottom: 10px; /* ボタン間の隙間を調整 */
+    }
+
   </style>
 </head>
 <body>
