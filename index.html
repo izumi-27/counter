@@ -169,36 +169,38 @@
       saveState();
     }
 
-    // 労働時間の表示を更新
-    function updateLiveTime() {
-      const now = new Date();
-      if (clockInTime && !clockOutTime) {
-        let elapsed = Math.floor((now - clockInTime) / 1000);
-        let breakNow = inBreak && pauseStart ? Math.floor((now - pauseStart) / 1000) : 0;
-        const actualElapsed = elapsed - (totalBreak + breakNow);
-        totalElapsed = actualElapsed;
-        const displayTime = formatSeconds(actualElapsed);
+// 労働時間の表示を更新
+function updateLiveTime() {
+  const now = new Date();
+  if (clockInTime && !clockOutTime) {
+    let elapsed = Math.floor((now - clockInTime) / 1000);
+    let breakNow = inBreak && pauseStart ? Math.floor((now - pauseStart) / 1000) : 0;
+    const actualElapsed = elapsed - (totalBreak + breakNow);
+    totalElapsed = actualElapsed;
+    const displayTime = formatSeconds(actualElapsed);
 
-        // 不要な更新を避けるため、前回と同じ表示時間なら更新しない
-        if (!inBreak && displayTime !== lastDisplayed) {
-          document.getElementById('liveWorkTime').textContent = displayTime;
-          lastDisplayed = displayTime;
-        }
-
-        if (workAfterBreakStart) {
-          const workAfterBreakElapsed = Math.floor((now - workAfterBreakStart) / 1000);
-          const workAfterBreakTimeText = `連続稼働：${formatSecondsToHMS(workAfterBreakElapsed)}`;
-          const workAfterBreakElement = document.getElementById('workTimeAfterBreak');
-          if (workAfterBreakElapsed > 3600) {
-            workAfterBreakElement.style.color = 'red';
-          } else {
-            workAfterBreakElement.style.color = '#999';
-          }
-          workAfterBreakElement.textContent = workAfterBreakTimeText;
-        }
-      }
-      requestAnimationFrame(updateLiveTime);
+    // 不要な更新を避けるため、前回と同じ表示時間なら更新しない
+    if (!inBreak && displayTime !== lastDisplayed) {
+      document.getElementById('liveWorkTime').textContent = displayTime;
+      lastDisplayed = displayTime;
     }
+
+    // ⬇️ 連続稼働時間の表示（再開後からの継続カウント）
+    const workAfterBreakElement = document.getElementById('workTimeAfterBreak');
+    if (workAfterBreakStart && !inBreak) {
+      const workAfterBreakElapsed = Math.floor((now - workAfterBreakStart) / 1000);
+      const workAfterBreakTimeText = `連続稼働：${formatSecondsToHMS(workAfterBreakElapsed)}`;
+      workAfterBreakElement.style.color = (workAfterBreakElapsed > 3600) ? 'red' : '#999';
+      workAfterBreakElement.textContent = workAfterBreakTimeText;
+    } else {
+      // 一時停止中は連続稼働タイマー止める（表示はキープ）
+      workAfterBreakElement.style.color = '#999';
+    }
+  }
+
+  requestAnimationFrame(updateLiveTime);
+}
+
 
     // 開始・一時停止の切り替え処理
     function handleStartPause() {
